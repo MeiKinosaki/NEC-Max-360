@@ -179,6 +179,13 @@ unsigned Z80::step() {
         return index == 6 ? 11 : 4;
     }
 
+    // RST p: push return address and jump to the fixed 8-byte vector.
+    if ((opcode & 0xC7) == 0xC7) {
+        push16(regs.pc);
+        regs.pc = static_cast<std::uint16_t>(opcode & 0x38);
+        return 11;
+    }
+
     const auto conditionMet = [this](unsigned condition) {
         const bool zero = (regs.f & FLAG_Z) != 0;
         const bool carry = (regs.f & FLAG_C) != 0;
@@ -259,6 +266,15 @@ unsigned Z80::step() {
     }
     case 0xE9: regs.pc = pair(2); return 4; // JP (HL)
     case 0xF9: regs.sp = pair(2); return 6; // LD SP,HL
+    case 0xE3: { // EX (SP),HL
+        const std::uint8_t low = read(regs.sp);
+        const std::uint8_t high = read(static_cast<std::uint16_t>(regs.sp + 1));
+        write(regs.sp, regs.l);
+        write(static_cast<std::uint16_t>(regs.sp + 1), regs.h);
+        regs.l = low;
+        regs.h = high;
+        return 19;
+    }
     case 0x01: case 0x11: case 0x21: case 0x31: // LD rr,nn
         setPair((opcode >> 4) & 3u, fetch16()); return 10;
     case 0x02: write(pair(0), regs.a); return 7;

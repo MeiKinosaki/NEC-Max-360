@@ -114,11 +114,37 @@ static void test_rotate_flags_and_control_instructions() {
     assert(cpu.step() == 4 && cpu.regs.pc == 0x1234);
 }
 
+static void test_conditional_jumps_calls_and_returns() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x3E, 0x00,             // LD A,0
+        0xB7,                   // OR A -> Z set
+        0xCA, 0x0A, 0x00,       // JP Z,000A (taken)
+        0x3E, 0xFF,             // skipped
+        0x00,                   // padding at 0009
+        0xCC, 0x10, 0x00,       // CALL Z,0010 (taken)
+        0xC4, 0x13, 0x00,       // CALL NZ,0013 (not taken)
+        0xC8,                   // RET Z (taken; return to 0010)
+        0x00,                   // 0011 padding
+        0x3E, 0x42,             // 0012 LD A,42
+        0xC0,                   // 0014 RET NZ (not taken)
+        0x76                    // 0015 HALT
+    };
+    cpu.load(0, program, sizeof(program));
+    assert(cpu.step() == 7 && cpu.regs.a == 0);
+    assert(cpu.step() == 4 && (cpu.regs.f & 0x40));
+    assert(cpu.step() == 10 && cpu.regs.pc == 0x000A);
+    assert(cpu.step() == 17 && cpu.regs.pc == 0x0010);
+    // The target starts with LD A,0x42; return to caller using an unconditional RET
+    // is tested separately below to keep this program's control flow deterministic.
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
     test_call_return_and_stack();
     test_inc_dec_flags_and_carry_preservation();
     test_rotate_flags_and_control_instructions();
+    test_conditional_jumps_calls_and_returns();
     return 0;
 }

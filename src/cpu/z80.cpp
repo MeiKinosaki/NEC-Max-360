@@ -167,6 +167,67 @@ unsigned Z80::step() {
 
     switch (opcode) {
     case 0x00: return 4; // NOP
+    case 0x07: { // RLCA
+        const auto carry = static_cast<std::uint8_t>(regs.a >> 7);
+        regs.a = static_cast<std::uint8_t>((regs.a << 1) | carry);
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV)) |
+            (regs.a & 0x28) | carry);
+        return 4;
+    }
+    case 0x0F: { // RRCA
+        const auto carry = static_cast<std::uint8_t>(regs.a & 1);
+        regs.a = static_cast<std::uint8_t>((regs.a >> 1) | (carry << 7));
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV)) |
+            (regs.a & 0x28) | carry);
+        return 4;
+    }
+    case 0x10: { // DJNZ e
+        const auto displacement = static_cast<std::int8_t>(fetch8());
+        --regs.b;
+        if (regs.b != 0) {
+            regs.pc = static_cast<std::uint16_t>(regs.pc + displacement);
+            return 13;
+        }
+        return 8;
+    }
+    case 0x17: { // RLA
+        const auto oldCarry = static_cast<std::uint8_t>(regs.f & FLAG_C);
+        const auto carry = static_cast<std::uint8_t>(regs.a >> 7);
+        regs.a = static_cast<std::uint8_t>((regs.a << 1) | oldCarry);
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV)) |
+            (regs.a & 0x28) | carry);
+        return 4;
+    }
+    case 0x1F: { // RRA
+        const auto oldCarry = static_cast<std::uint8_t>((regs.f & FLAG_C) << 7);
+        const auto carry = static_cast<std::uint8_t>(regs.a & 1);
+        regs.a = static_cast<std::uint8_t>((regs.a >> 1) | oldCarry);
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV)) |
+            (regs.a & 0x28) | carry);
+        return 4;
+    }
+    case 0x2F: // CPL
+        regs.a = static_cast<std::uint8_t>(~regs.a);
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV | FLAG_C)) |
+            FLAG_H | FLAG_N | (regs.a & 0x28));
+        return 4;
+    case 0x37: // SCF
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV)) |
+            (regs.a & 0x28) | FLAG_C);
+        return 4;
+    case 0x3F: { // CCF
+        const bool oldCarry = (regs.f & FLAG_C) != 0;
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV)) |
+            (regs.a & 0x28) | (oldCarry ? FLAG_H : FLAG_C));
+        return 4;
+    }
+    case 0xEB: { // EX DE,HL
+        const auto de = pair(1), hl = pair(2);
+        setPair(1, hl); setPair(2, de);
+        return 4;
+    }
+    case 0xE9: regs.pc = pair(2); return 4; // JP (HL)
+    case 0xF9: regs.sp = pair(2); return 6; // LD SP,HL
     case 0x01: case 0x11: case 0x21: case 0x31: // LD rr,nn
         setPair((opcode >> 4) & 3u, fetch16()); return 10;
     case 0x02: write(pair(0), regs.a); return 7;

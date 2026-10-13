@@ -10,7 +10,7 @@ Repository: https://github.com/MeiKinosaki/NEC-Max-360
 - CPU instruction and data accesses routed through a shared flat 64 KiB memory bus.
 - Machine shell with instruction-cycle accounting.
 - Generic I/O port registry, framebuffer storage, audio sample buffer and keyboard-state scaffold.
-- Host regression tests for CPU load/store/arithmetic/call/return and INC/DEC flags, memory bus, scheduler and scaffold devices.
+- Host regression tests for CPU control flow, stack operations, 16-bit transfers, INC/DEC flags and even parity; machine integration, memory bus, scheduler and scaffold devices.
 - CMake target names aligned with the `NEC Max 360` project identity.
 
 ## Host build

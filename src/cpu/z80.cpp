@@ -13,9 +13,11 @@ constexpr std::uint8_t FLAG_PV = 0x04;
 constexpr std::uint8_t FLAG_N = 0x02;
 constexpr std::uint8_t FLAG_C = 0x01;
 bool parityEven(std::uint8_t v) {
+    // Fold every bit into bit 0; an even number of set bits yields zero.
     v ^= static_cast<std::uint8_t>(v >> 4);
-    v &= 0x0F;
-    return ((0x6996u >> v) & 1u) == 0;
+    v ^= static_cast<std::uint8_t>(v >> 2);
+    v ^= static_cast<std::uint8_t>(v >> 1);
+    return (v & 1u) == 0;
 }
 }
 

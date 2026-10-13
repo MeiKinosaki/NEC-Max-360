@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
-project(NEC_PC_6001 LANGUAGES CXX)
+project(NEC_Max_360 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(pc6001_core
+add_library(necmax360_core
     src/cpu/z80.cpp
     src/machine/memory.cpp
     src/machine/machine.cpp
@@ -15,7 +15,7 @@ add_library(pc6001_core
     src/input/keyboard.cpp
 )
 target_include_directories(pc6001_core PUBLIC src)
-add_executable(pc6001 src/main.cpp)
+add_executable(necmax360 src/main.cpp)
 target_link_libraries(pc6001 PRIVATE pc6001_core)
 
 include(CTest)

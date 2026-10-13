@@ -1,6 +1,10 @@
-// PC-6001 machine memory mapping will be implemented here.
-// The current Z80 bring-up core owns a flat 64 KiB test memory; this is not
-// yet the final PC-6001 ROM/RAM/MMIO map.
+#include "machine/memory.h"
+
 namespace pc6001 {
-void pc6001_memory_module_placeholder() {}
-}
+
+MemoryBus::MemoryBus() { reset(); }
+void MemoryBus::reset() { bytes_.fill(0); }
+std::uint8_t MemoryBus::read(std::uint16_t address) const { return bytes_[address]; }
+void MemoryBus::write(std::uint16_t address, std::uint8_t value) { bytes_[address] = value; }
+
+} // namespace pc6001

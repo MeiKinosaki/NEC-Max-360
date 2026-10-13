@@ -173,6 +173,28 @@ static void test_conditional_jumps_calls_and_returns() {
     }
 }
 
+static void test_add_hl_register_pairs_flags() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x21, 0xFF, 0x0F, // LD HL,0x0FFF
+        0x01, 0x01, 0x00, // LD BC,1
+        0x09,             // ADD HL,BC -> 0x1000, half carry
+        0x21, 0xFF, 0xFF, // LD HL,0xFFFF
+        0x09              // ADD HL,BC -> 0x0000, half carry and carry
+    };
+    cpu.load(0, program, sizeof(program));
+    cpu.regs.f = 0xC4; // S, Z and PV must be preserved by ADD HL,rr.
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 11);
+    assert(cpu.regs.h == 0x10 && cpu.regs.l == 0x00);
+    assert(cpu.regs.f == 0xD4); // preserved S/Z/PV plus H
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 11);
+    assert(cpu.regs.h == 0x00 && cpu.regs.l == 0x00);
+    assert(cpu.regs.f == 0xD5); // preserved S/Z/PV plus H and C
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
@@ -180,5 +202,6 @@ int main() {
     test_inc_dec_flags_and_carry_preservation();
     test_rotate_flags_and_control_instructions();
     test_conditional_jumps_calls_and_returns();
+    test_add_hl_register_pairs_flags();
     return 0;
 }

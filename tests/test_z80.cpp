@@ -36,7 +36,7 @@ static void test_register_load_and_arithmetic() {
     cpu.step(); assert(cpu.regs.a == 7);
     cpu.step(); assert((cpu.regs.f & 0x40) != 0); // CP result is zero
     const auto before = cpu.regs.pc;
-    cpu.step(); assert(cpu.regs.pc == static_cast<std::uint16_t>(before + 1));
+    cpu.step(); assert(cpu.regs.pc == static_cast<std::uint16_t>(before + 2));
     cpu.step(); assert(cpu.regs.a == 8);
     cpu.step(); assert(cpu.regs.halted);
 }

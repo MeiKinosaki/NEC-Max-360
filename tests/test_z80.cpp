@@ -226,6 +226,33 @@ static void test_rst_vectors_and_exchange_stack_hl() {
     }
 }
 
+static void test_ed_word_memory_transfers() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x01, 0x34, 0x12,       // LD BC,1234
+        0xED, 0x43, 0x00, 0x40,// LD (4000),BC
+        0x11, 0x00, 0x00,       // LD DE,0
+        0xED, 0x5B, 0x00, 0x40,// LD DE,(4000)
+        0x21, 0x78, 0x56,       // LD HL,5678
+        0xED, 0x63, 0x02, 0x40,// LD (4002),HL
+        0x31, 0x00, 0x00,       // LD SP,0
+        0xED, 0x7B, 0x02, 0x40,// LD SP,(4002)
+        0x76
+    };
+    cpu.load(0, program, sizeof(program));
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 20);
+    assert(cpu.read(0x4000) == 0x34 && cpu.read(0x4001) == 0x12);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 20 && cpu.regs.d == 0x12 && cpu.regs.e == 0x34);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 20);
+    assert(cpu.read(0x4002) == 0x78 && cpu.read(0x4003) == 0x56);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 20 && cpu.regs.sp == 0x5678);
+    assert(cpu.step() == 4 && cpu.regs.halted);
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
@@ -235,5 +262,6 @@ int main() {
     test_conditional_jumps_calls_and_returns();
     test_add_hl_register_pairs_flags();
     test_rst_vectors_and_exchange_stack_hl();
+    test_ed_word_memory_transfers();
     return 0;
 }

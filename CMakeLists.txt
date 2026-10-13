@@ -37,4 +37,8 @@ if(BUILD_TESTING)
     add_executable(necmax360_scheduler_tests tests/test_scheduler.cpp)
     target_link_libraries(necmax360_scheduler_tests PRIVATE necmax360_core)
     add_test(NAME necmax360_scheduler_tests COMMAND necmax360_scheduler_tests)
+
+    add_executable(necmax360_machine_tests tests/test_machine.cpp)
+    target_link_libraries(necmax360_machine_tests PRIVATE necmax360_core)
+    add_test(NAME necmax360_machine_tests COMMAND necmax360_machine_tests)
 endif()

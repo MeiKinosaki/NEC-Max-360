@@ -22,7 +22,7 @@ int main() {
     const bool ok = machine.cpu().regs.a == 0x2A &&
                     machine.memory().read(0x2000) == 0x2A &&
                     machine.cpu().regs.halted;
-    std::cout << "NEC PC-6001 shared-bus smoke test: "
+    std::cout << "NEC Max 360 | PC-6001 shared-bus smoke test: "
               << (ok ? "PASS" : "FAIL")
               << ", steps=" << steps
               << ", cycles=" << machine.totalCycles() << "\n";

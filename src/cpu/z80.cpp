@@ -149,6 +149,20 @@ unsigned Z80::step() {
         return src == 6 ? 7 : 4;
     }
 
+    // ADD HL,rr (flags S/Z/PV preserved; H and C recalculated).
+    if ((opcode & 0xCF) == 0x09) {
+        const std::uint16_t lhs = pair(2);
+        const std::uint16_t rhs = pair((opcode >> 4) & 3u);
+        const std::uint32_t sum = static_cast<std::uint32_t>(lhs) + rhs;
+        const std::uint16_t out = static_cast<std::uint16_t>(sum);
+        regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_PV)) |
+            ((static_cast<std::uint32_t>(lhs ^ rhs ^ out) & 0x1000u) ? FLAG_H : 0) |
+            ((sum & 0x10000u) ? FLAG_C : 0) |
+            ((out >> 8) & 0x28));
+        setPair(2, out);
+        return 11;
+    }
+
     // INC r and DEC r.
     if ((opcode & 0xC7) == 0x04 || (opcode & 0xC7) == 0x05) {
         const unsigned index = (opcode >> 3) & 7u;

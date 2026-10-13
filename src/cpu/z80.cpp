@@ -4,6 +4,19 @@
 #include <cstddef>
 
 namespace pc6001 {
+namespace {
+constexpr std::uint8_t FLAG_S = 0x80;
+constexpr std::uint8_t FLAG_Z = 0x40;
+constexpr std::uint8_t FLAG_H = 0x10;
+constexpr std::uint8_t FLAG_PV = 0x04;
+constexpr std::uint8_t FLAG_N = 0x02;
+constexpr std::uint8_t FLAG_C = 0x01;
+bool parityEven(std::uint8_t v) {
+    v ^= static_cast<std::uint8_t>(v >> 4);
+    v &= 0x0F;
+    return ((0x6996u >> v) & 1u) == 0;
+}
+}
 
 Z80::Z80() { reset(); }
 
@@ -19,79 +32,185 @@ void Z80::load(std::uint16_t address, const std::uint8_t* data, std::size_t size
     std::copy_n(data, count, memory_.begin() + start);
 }
 
-std::uint8_t Z80::read(std::uint16_t address) const {
-    return memory_[address];
-}
-
-void Z80::write(std::uint16_t address, std::uint8_t value) {
-    memory_[address] = value;
-}
+std::uint8_t Z80::read(std::uint16_t address) const { return memory_[address]; }
+void Z80::write(std::uint16_t address, std::uint8_t value) { memory_[address] = value; }
+std::uint8_t Z80::fetch8() { return read(regs.pc++); }
 
 std::uint16_t Z80::fetch16() {
-    const std::uint8_t low = read(regs.pc++);
-    const std::uint8_t high = read(regs.pc++);
+    const std::uint8_t low = fetch8();
+    const std::uint8_t high = fetch8();
     return static_cast<std::uint16_t>(low | (static_cast<std::uint16_t>(high) << 8));
 }
 
-// Returns a rough base-cycle count for the implemented subset.
-// This is a development stub, not a complete or cycle-accurate Z80.
+void Z80::push16(std::uint16_t value) {
+    write(--regs.sp, static_cast<std::uint8_t>(value >> 8));
+    write(--regs.sp, static_cast<std::uint8_t>(value & 0xFF));
+}
+std::uint16_t Z80::pop16() {
+    const auto low = read(regs.sp++);
+    const auto high = read(regs.sp++);
+    return static_cast<std::uint16_t>(low | (static_cast<std::uint16_t>(high) << 8));
+}
+
+std::uint8_t& Z80::reg8(unsigned index) {
+    switch (index & 7u) {
+    case 0: return regs.b;
+    case 1: return regs.c;
+    case 2: return regs.d;
+    case 3: return regs.e;
+    case 4: return regs.h;
+    case 5: return regs.l;
+    case 7: return regs.a;
+    default: return regs.a; // (HL) is handled separately by the decoder.
+    }
+}
+std::uint16_t Z80::pair(unsigned index) const {
+    switch (index & 3u) {
+    case 0: return static_cast<std::uint16_t>((regs.b << 8) | regs.c);
+    case 1: return static_cast<std::uint16_t>((regs.d << 8) | regs.e);
+    case 2: return static_cast<std::uint16_t>((regs.h << 8) | regs.l);
+    default: return regs.sp;
+    }
+}
+void Z80::setPair(unsigned index, std::uint16_t value) {
+    switch (index & 3u) {
+    case 0: regs.b = value >> 8; regs.c = value & 0xFF; break;
+    case 1: regs.d = value >> 8; regs.e = value & 0xFF; break;
+    case 2: regs.h = value >> 8; regs.l = value & 0xFF; break;
+    default: regs.sp = value; break;
+    }
+}
+void Z80::setLogicFlags(std::uint8_t value) {
+    regs.f = static_cast<std::uint8_t>((value & FLAG_S) |
+        (value == 0 ? FLAG_Z : 0) | (parityEven(value) ? FLAG_PV : 0));
+}
+void Z80::alu(unsigned operation, std::uint8_t value) {
+    const std::uint8_t old = regs.a;
+    const unsigned carryIn = (operation == 1 || operation == 3) && (regs.f & FLAG_C) ? 1u : 0u;
+    unsigned result = old;
+    switch (operation & 7u) {
+    case 0: case 1: { // ADD/ADC
+        result = static_cast<unsigned>(old) + value + carryIn;
+        const auto out = static_cast<std::uint8_t>(result);
+        regs.f = static_cast<std::uint8_t>((out & FLAG_S) | (out == 0 ? FLAG_Z : 0) |
+            (((old ^ value ^ out) & 0x10) ? FLAG_H : 0) |
+            ((~(old ^ value) & (old ^ out) & 0x80) ? FLAG_PV : 0) |
+            (result > 0xFF ? FLAG_C : 0));
+        regs.a = out; break;
+    }
+    case 2: case 3: case 7: { // SUB/SBC/CP
+        const unsigned sub = static_cast<unsigned>(value) + carryIn;
+        const auto out = static_cast<std::uint8_t>(static_cast<unsigned>(old) - sub);
+        regs.f = static_cast<std::uint8_t>(FLAG_N | (out & FLAG_S) |
+            (out == 0 ? FLAG_Z : 0) | (((old ^ value ^ out) & 0x10) ? FLAG_H : 0) |
+            (((old ^ value) & (old ^ out) & 0x80) ? FLAG_PV : 0) |
+            (static_cast<unsigned>(old) < sub ? FLAG_C : 0));
+        if ((operation & 7u) != 7u) regs.a = out;
+        break;
+    }
+    case 4: regs.a = static_cast<std::uint8_t>(old & value); setLogicFlags(regs.a); regs.f |= FLAG_H; break;
+    case 5: regs.a = static_cast<std::uint8_t>(old ^ value); setLogicFlags(regs.a); break;
+    case 6: regs.a = static_cast<std::uint8_t>(old | value); setLogicFlags(regs.a); break;
+    }
+}
+
 unsigned Z80::step() {
     if (regs.halted) return 4;
+    const std::uint8_t opcode = fetch8();
 
-    const std::uint8_t opcode = read(regs.pc++);
+    // LD r,r' matrix, including (HL).
+    if (opcode >= 0x40 && opcode <= 0x7F) {
+        if (opcode == 0x76) { regs.halted = true; return 4; }
+        const unsigned dst = (opcode >> 3) & 7u, src = opcode & 7u;
+        const std::uint8_t value = src == 6 ? read(pair(2)) : reg8(src);
+        if (dst == 6) write(pair(2), value); else reg8(dst) = value;
+        return (dst == 6 || src == 6) ? 7 : 4;
+    }
+    // Register ALU matrix: ADD, ADC, SUB, SBC, AND, XOR, OR, CP.
+    if (opcode >= 0x80 && opcode <= 0xBF) {
+        const unsigned operation = (opcode >> 3) & 7u, src = opcode & 7u;
+        alu(operation, src == 6 ? read(pair(2)) : reg8(src));
+        return src == 6 ? 7 : 4;
+    }
+
+    // INC r and DEC r.
+    if ((opcode & 0xC7) == 0x04 || (opcode & 0xC7) == 0x05) {
+        const unsigned index = (opcode >> 3) & 7u;
+        const bool decrement = (opcode & 1u) != 0;
+        const std::uint8_t old = index == 6 ? read(pair(2)) : reg8(index);
+        const std::uint8_t value = static_cast<std::uint8_t>(old + (decrement ? -1 : 1));
+        const auto carry = static_cast<std::uint8_t>(regs.f & FLAG_C);
+        regs.f = static_cast<std::uint8_t>(carry | (value & FLAG_S) |
+            (value == 0 ? FLAG_Z : 0) |
+            ((decrement ? (old & 0x0F) == 0 : (old & 0x0F) == 0x0F) ? FLAG_H : 0) |
+            ((decrement ? old == 0x80 : old == 0x7F) ? FLAG_PV : 0) |
+            (decrement ? FLAG_N : 0));
+        if (index == 6) write(pair(2), value); else reg8(index) = value;
+        return index == 6 ? 11 : 4;
+    }
+
     switch (opcode) {
-    case 0x00: // NOP
-        return 4;
-    case 0x3E: // LD A,n
-        regs.a = read(regs.pc++);
-        return 7;
-    case 0x06: // LD B,n
-        regs.b = read(regs.pc++);
-        return 7;
-    case 0x0E: // LD C,n
-        regs.c = read(regs.pc++);
-        return 7;
-    case 0x16: // LD D,n
-        regs.d = read(regs.pc++);
-        return 7;
-    case 0x1E: // LD E,n
-        regs.e = read(regs.pc++);
-        return 7;
-    case 0x26: // LD H,n
-        regs.h = read(regs.pc++);
-        return 7;
-    case 0x2E: // LD L,n
-        regs.l = read(regs.pc++);
-        return 7;
-    case 0x32: { // LD (nn),A
-        const auto address = fetch16();
-        write(address, regs.a);
-        return 13;
+    case 0x00: return 4; // NOP
+    case 0x01: case 0x11: case 0x21: case 0x31: // LD rr,nn
+        setPair((opcode >> 4) & 3u, fetch16()); return 10;
+    case 0x02: write(pair(0), regs.a); return 7;
+    case 0x12: write(pair(1), regs.a); return 7;
+    case 0x0A: regs.a = read(pair(0)); return 7;
+    case 0x1A: regs.a = read(pair(1)); return 7;
+    case 0x03: case 0x13: case 0x23: case 0x33: {
+        const unsigned p = (opcode >> 4) & 3u;
+        setPair(p, static_cast<std::uint16_t>(pair(p) + 1)); return 6;
     }
-    case 0x3A: { // LD A,(nn)
-        const auto address = fetch16();
-        regs.a = read(address);
-        return 13;
+    case 0x0B: case 0x1B: case 0x2B: case 0x3B: {
+        const unsigned p = (opcode >> 4) & 3u;
+        setPair(p, static_cast<std::uint16_t>(pair(p) - 1)); return 6;
     }
-    case 0xAF: // XOR A
-        regs.a = 0;
-        regs.f = 0x40; // Z flag; other flag details are not yet modeled.
-        return 4;
-    case 0xC3: // JP nn
-        regs.pc = fetch16();
+    case 0x3E: regs.a = fetch8(); return 7;
+    case 0x06: regs.b = fetch8(); return 7;
+    case 0x0E: regs.c = fetch8(); return 7;
+    case 0x16: regs.d = fetch8(); return 7;
+    case 0x1E: regs.e = fetch8(); return 7;
+    case 0x26: regs.h = fetch8(); return 7;
+    case 0x2E: regs.l = fetch8(); return 7;
+    case 0x36: write(pair(2), fetch8()); return 10;
+    case 0x22: { const auto a = fetch16(); write(a, regs.l); write(static_cast<std::uint16_t>(a+1), regs.h); return 16; }
+    case 0x2A: { const auto a = fetch16(); regs.l = read(a); regs.h = read(static_cast<std::uint16_t>(a+1)); return 16; }
+    case 0x32: { const auto a = fetch16(); write(a, regs.a); return 13; }
+    case 0x3A: { const auto a = fetch16(); regs.a = read(a); return 13; }
+    case 0xAF: regs.a = 0; setLogicFlags(regs.a); return 4;
+    case 0xC3: regs.pc = fetch16(); return 10;
+    case 0x18: { const auto d = static_cast<std::int8_t>(fetch8()); regs.pc = static_cast<std::uint16_t>(regs.pc + d); return 12; }
+    case 0x20: case 0x28: case 0x30: case 0x38: {
+        const auto d = static_cast<std::int8_t>(fetch8());
+        const bool z = (regs.f & FLAG_Z) != 0, c = (regs.f & FLAG_C) != 0;
+        const unsigned cond = (opcode >> 3) & 3u;
+        const bool take = cond == 0 ? !z : cond == 1 ? z : cond == 2 ? !c : c;
+        if (take) { regs.pc = static_cast<std::uint16_t>(regs.pc + d); return 12; }
+        return 7;
+    }
+    case 0xCD: { const auto target = fetch16(); push16(regs.pc); regs.pc = target; return 17; }
+    case 0xC9: regs.pc = pop16(); return 10;
+    case 0xC5: case 0xD5: case 0xE5: case 0xF5: {
+        const unsigned p = (opcode >> 4) & 3u;
+        const std::uint16_t v = p == 3 ? static_cast<std::uint16_t>((regs.a << 8) | regs.f) : pair(p);
+        push16(v); return 11;
+    }
+    case 0xC1: case 0xD1: case 0xE1: case 0xF1: {
+        const unsigned p = (opcode >> 4) & 3u; const auto v = pop16();
+        if (p == 3) { regs.a = v >> 8; regs.f = v & 0xFF; } else setPair(p, v);
         return 10;
-    case 0x18: { // JR e
-        const auto displacement = static_cast<std::int8_t>(read(regs.pc++));
-        regs.pc = static_cast<std::uint16_t>(regs.pc + displacement);
-        return 12;
     }
-    case 0x76: // HALT
-        regs.halted = true;
-        return 4;
-    default:
-        // Unknown instructions are treated as NOP only to keep bring-up
-        // deterministic. Full opcode coverage and diagnostics are future work.
-        return 4;
+    case 0xC6: alu(0, fetch8()); return 7;
+    case 0xCE: alu(1, fetch8()); return 7;
+    case 0xD6: alu(2, fetch8()); return 7;
+    case 0xDE: alu(3, fetch8()); return 7;
+    case 0xE6: alu(4, fetch8()); return 7;
+    case 0xEE: alu(5, fetch8()); return 7;
+    case 0xF6: alu(6, fetch8()); return 7;
+    case 0xFE: alu(7, fetch8()); return 7;
+    case 0xF3: case 0xFB: return 4; // DI/EI: interrupt controller not yet connected.
+    case 0x76: regs.halted = true; return 4;
+    default: return 4; // Unsupported opcode: placeholder behavior; full core remains incomplete.
     }
 }
 

@@ -5,10 +5,24 @@
 #include "video/framebuffer.h"
 #include <cassert>
 #include <cstdint>
+
 int main() {
     pc6001::Machine machine;
     machine.reset();
+    const std::uint8_t program[] = {
+        0x3E, 0x5A,       // LD A,0x5A
+        0x32, 0x00, 0x40, // LD (0x4000),A
+        0x76
+    };
+    machine.memory().load(0, program, sizeof(program));
+    assert(machine.step() == 7);
+    assert(machine.cpu().regs.a == 0x5A);
+    assert(machine.step() == 13);
+    assert(machine.memory().read(0x4000) == 0x5A);
     assert(machine.step() == 4);
+    assert(machine.cpu().regs.halted);
+    assert(machine.totalCycles() == 24);
+
     pc6001::IoPorts ports;
     assert(ports.read(0x20) == 0xFF);
     ports.write(0x20, 0x42);

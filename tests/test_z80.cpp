@@ -135,15 +135,15 @@ static void test_conditional_jumps_calls_and_returns() {
         const std::uint8_t program[] = {
             0x3E, 0x00,       // LD A,0
             0xB7,             // OR A -> Z
-            0xCC, 0x08, 0x00, // CALL Z,0008
+            0xCC, 0x07, 0x00, // CALL Z,0007
             0x76,             // return address 0006: HALT
-            0x3E, 0x55,       // 0008 LD A,55
+            0x3E, 0x55,       // 0007 LD A,55
             0xC9              // 000A RET
         };
         cpu.load(0, program, sizeof(program));
         assert(cpu.step() == 7);
         assert(cpu.step() == 4 && (cpu.regs.f & 0x40));
-        assert(cpu.step() == 17 && cpu.regs.pc == 8);
+        assert(cpu.step() == 17 && cpu.regs.pc == 7);
         assert(cpu.step() == 7 && cpu.regs.a == 0x55);
         assert(cpu.step() == 10 && cpu.regs.pc == 6);
         assert(cpu.step() == 4 && cpu.regs.halted);
@@ -153,15 +153,15 @@ static void test_conditional_jumps_calls_and_returns() {
         const std::uint8_t program[] = {
             0x3E, 0x01,       // LD A,1
             0xB7,             // OR A -> Z clear
-            0xC4, 0x08, 0x00, // CALL NZ,0008 (taken)
+            0xC4, 0x07, 0x00, // CALL NZ,0007 (taken)
             0x76,             // HALT after return
-            0xC0              // 0008 RET NZ
+            0xC0              // 0007 RET NZ
         };
         cpu.load(0, program, sizeof(program));
         cpu.step();
         cpu.step();
         assert((cpu.regs.f & 0x40) == 0);
-        assert(cpu.step() == 17 && cpu.regs.pc == 8);
+        assert(cpu.step() == 17 && cpu.regs.pc == 7);
         assert(cpu.step() == 11 && cpu.regs.pc == 6);
         assert(cpu.step() == 4 && cpu.regs.halted);
     }

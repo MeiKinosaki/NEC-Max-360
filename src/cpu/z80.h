@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace pc6001 {
@@ -31,6 +32,14 @@ public:
 private:
     std::array<std::uint8_t, 65536> memory_{};
     std::uint16_t fetch16();
+    void push16(std::uint16_t value);
+    std::uint16_t pop16();
+    std::uint8_t fetch8();
+    std::uint8_t& reg8(unsigned index);
+    std::uint16_t pair(unsigned index) const;
+    void setPair(unsigned index, std::uint16_t value);
+    void setLogicFlags(std::uint8_t value);
+    void alu(unsigned operation, std::uint8_t value);
 };
 
 } // namespace pc6001

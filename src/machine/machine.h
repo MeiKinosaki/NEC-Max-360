@@ -7,18 +7,20 @@
 
 namespace pc6001 {
 
-// Initial machine shell. CPU currently has an internal test memory; bus/CPU
-// integration is the next architectural step, so this class is scaffolding.
+// Machine shell with CPU memory accesses routed through the shared bus.
 class Machine {
 public:
+    Machine();
     void reset();
     unsigned step();
     Z80& cpu() { return cpu_; }
     const Z80& cpu() const { return cpu_; }
     MemoryBus& memory() { return memory_; }
     const MemoryBus& memory() const { return memory_; }
+    std::uint64_t totalCycles() const { return scheduler_.totalCycles(); }
 private:
     Z80 cpu_{};
     MemoryBus memory_{};
+    Scheduler scheduler_{};
 };
 } // namespace pc6001

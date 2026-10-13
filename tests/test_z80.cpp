@@ -253,6 +253,27 @@ static void test_ed_word_memory_transfers() {
     assert(cpu.step() == 4 && cpu.regs.halted);
 }
 
+static void test_even_parity_flags() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0xAF,             // XOR A -> A=0, even parity and Z
+        0x3E, 0x01,       // LD A,1
+        0xB7,             // OR A -> odd parity, Z clear
+        0x3E, 0x03,       // LD A,3
+        0xB7              // OR A -> two set bits, even parity
+    };
+    cpu.load(0, program, sizeof(program));
+    assert(cpu.step() == 4);
+    assert((cpu.regs.f & 0x44) == 0x44); // Z and PV for zero.
+    assert(cpu.step() == 7);
+    assert(cpu.step() == 4);
+    assert((cpu.regs.f & 0x44) == 0); // 1 has odd parity and is nonzero.
+    assert(cpu.step() == 7);
+    assert(cpu.step() == 4);
+    assert((cpu.regs.f & 0x04) != 0); // 3 has two set bits.
+    assert((cpu.regs.f & 0x40) == 0);
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
@@ -263,5 +284,6 @@ int main() {
     test_add_hl_register_pairs_flags();
     test_rst_vectors_and_exchange_stack_hl();
     test_ed_word_memory_transfers();
+    test_even_parity_flags();
     return 0;
 }

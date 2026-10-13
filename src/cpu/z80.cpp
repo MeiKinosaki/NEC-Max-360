@@ -204,6 +204,29 @@ unsigned Z80::step() {
     };
 
     switch (opcode) {
+    case 0xED: {
+        const std::uint8_t extended = fetch8();
+        switch (extended) {
+        case 0x43: case 0x53: case 0x63: case 0x73: { // LD (nn),BC/DE/HL/SP
+            const std::uint16_t address = fetch16();
+            const std::uint16_t value = pair((extended >> 4) & 3u);
+            write(address, static_cast<std::uint8_t>(value & 0xFF));
+            write(static_cast<std::uint16_t>(address + 1),
+                  static_cast<std::uint8_t>(value >> 8));
+            return 20;
+        }
+        case 0x4B: case 0x5B: case 0x6B: case 0x7B: { // LD BC/DE/HL/SP,(nn)
+            const std::uint16_t address = fetch16();
+            const std::uint16_t value = static_cast<std::uint16_t>(
+                read(address) |
+                (static_cast<std::uint16_t>(read(static_cast<std::uint16_t>(address + 1))) << 8));
+            setPair((extended >> 4) & 3u, value);
+            return 20;
+        }
+        default:
+            return 8; // Unimplemented ED-prefixed instruction placeholder.
+        }
+    }
     case 0x00: return 4; // NOP
     case 0x07: { // RLCA
         const auto carry = static_cast<std::uint8_t>(regs.a >> 7);

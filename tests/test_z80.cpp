@@ -122,19 +122,13 @@ static void test_conditional_jumps_calls_and_returns() {
             0xB7,             // OR A -> Z set
             0xCA, 0x08, 0x00, // JP Z,0008 (taken)
             0x3E, 0xFF,       // skipped
-            0xCC, 0x0D, 0x00, // 0008 CALL Z,000D
-            0xC4, 0x10, 0x00, // 000B CALL NZ,0010 (not taken)
-            0x3E, 0x42,       // 000E LD A,42
-            0xC3, 0x14, 0x00, // 0010 JP 0014
-            0x00,             // 0013 padding
-            0x76              // 0014 HALT
+            0x76              // 0008 HALT
         };
         cpu.load(0, program, sizeof(program));
         assert(cpu.step() == 7 && cpu.regs.a == 0);
         assert(cpu.step() == 4 && (cpu.regs.f & 0x40));
         assert(cpu.step() == 10 && cpu.regs.pc == 8);
-        // CALL Z targets 0x000D, whose bytes must contain a RET.
-        // Use a direct, separate call/return case below for stack validation.
+        assert(cpu.step() == 4 && cpu.regs.halted);
     }
     {
         pc6001::Z80 cpu;

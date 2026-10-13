@@ -8,6 +8,7 @@ add_library(pc6001_core
     src/cpu/z80.cpp
     src/machine/memory.cpp
     src/machine/machine.cpp
+    src/machine/scheduler.cpp
     src/machine/io_ports.cpp
     src/video/framebuffer.cpp
     src/audio/audio_buffer.cpp

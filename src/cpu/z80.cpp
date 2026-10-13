@@ -30,7 +30,12 @@ void Z80::load(std::uint16_t address, const std::uint8_t* data, std::size_t size
     if (data == nullptr || size == 0) return;
     const std::size_t start = address;
     const std::size_t count = std::min(size, memory_.size() - start);
-    std::copy_n(data, count, memory_.begin() + start);
+    if (busWrite_) {
+        for (std::size_t i = 0; i < count; ++i)
+            busWrite_(static_cast<std::uint16_t>(start + i), data[i]);
+    } else {
+        std::copy_n(data, count, memory_.begin() + start);
+    }
 }
 
 void Z80::setBus(std::function<std::uint8_t(std::uint16_t)> readFn,

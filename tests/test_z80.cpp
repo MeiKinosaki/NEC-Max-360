@@ -189,6 +189,43 @@ static void test_add_hl_register_pairs_flags() {
     assert(cpu.regs.f == 0xD5); // preserved S/Z/PV plus H and C
 }
 
+static void test_rst_vectors_and_exchange_stack_hl() {
+    {
+        pc6001::Z80 cpu;
+        const std::uint8_t program[] = {
+            0xC7, // RST 00H
+            0x76  // HALT at return address 0001
+        };
+        const std::uint8_t vector[] = {0xC9}; // RET at vector 0000
+        cpu.load(0, program, sizeof(program));
+        cpu.load(0x0000, vector, sizeof(vector));
+        // Place RST at 0008 so its vector and opcode do not overlap.
+        const std::uint8_t rst[] = {0xC7, 0x76};
+        cpu.load(0x0008, rst, sizeof(rst));
+        cpu.regs.pc = 0x0008;
+        assert(cpu.step() == 11 && cpu.regs.pc == 0x0000);
+        assert(cpu.step() == 10 && cpu.regs.pc == 0x0009);
+        assert(cpu.step() == 4 && cpu.regs.halted);
+    }
+    {
+        pc6001::Z80 cpu;
+        const std::uint8_t program[] = {
+            0x21, 0x34, 0x12, // LD HL,1234
+            0xE3,             // EX (SP),HL
+            0x76
+        };
+        cpu.load(0, program, sizeof(program));
+        cpu.regs.sp = 0x4000;
+        cpu.write(0x4000, 0xCD);
+        cpu.write(0x4001, 0xAB);
+        assert(cpu.step() == 10);
+        assert(cpu.step() == 19);
+        assert(cpu.regs.h == 0xAB && cpu.regs.l == 0xCD);
+        assert(cpu.read(0x4000) == 0x34 && cpu.read(0x4001) == 0x12);
+        assert(cpu.step() == 4 && cpu.regs.halted);
+    }
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
@@ -197,5 +234,6 @@ int main() {
     test_rotate_flags_and_control_instructions();
     test_conditional_jumps_calls_and_returns();
     test_add_hl_register_pairs_flags();
+    test_rst_vectors_and_exchange_stack_hl();
     return 0;
 }

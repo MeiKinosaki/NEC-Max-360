@@ -17,3 +17,9 @@ jobs:
         run: cmake --build build --parallel
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Package host bring-up executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: pc6001-host-bringup
+          path: build/pc6001
+          if-no-files-found: error

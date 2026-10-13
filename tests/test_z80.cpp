@@ -41,6 +41,24 @@ static void test_register_load_and_arithmetic() {
     cpu.step(); assert(cpu.regs.halted);
 }
 
+static void test_inc_dec_flags_and_carry_preservation() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x3E, 0x7F, // LD A,0x7F
+        0x3C,       // INC A -> 0x80, overflow
+        0x3D,       // DEC A -> 0x7F, overflow
+        0x76
+    };
+    cpu.load(0, program, sizeof(program));
+    cpu.regs.f = 0x01; // INC/DEC must preserve carry.
+    assert(cpu.step() == 7 && cpu.regs.a == 0x7F);
+    assert(cpu.step() == 4 && cpu.regs.a == 0x80);
+    assert(cpu.regs.f == 0x95); // S, H, PV and preserved C.
+    assert(cpu.step() == 4 && cpu.regs.a == 0x7F);
+    assert(cpu.regs.f == 0x17); // H, PV, N and preserved C.
+    assert(cpu.step() == 4 && cpu.regs.halted);
+}
+
 static void test_call_return_and_stack() {
     pc6001::Z80 cpu;
     const std::uint8_t program[] = {
@@ -65,5 +83,6 @@ int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
     test_call_return_and_stack();
+    test_inc_dec_flags_and_carry_preservation();
     return 0;
 }

@@ -2,6 +2,7 @@
 
 #include "cpu/z80.h"
 #include "machine/memory.h"
+#include "machine/scheduler.h"
 
 #include <cstdint>
 

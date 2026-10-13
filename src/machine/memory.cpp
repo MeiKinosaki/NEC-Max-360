@@ -4,13 +4,43 @@
 
 namespace pc6001 {
 MemoryBus::MemoryBus() { reset(); }
-void MemoryBus::reset() { bytes_.fill(0); }
-std::uint8_t MemoryBus::read(std::uint16_t address) const { return bytes_[address]; }
-void MemoryBus::write(std::uint16_t address, std::uint8_t value) { bytes_[address] = value; }
+
+void MemoryBus::reset() {
+    bytes_.fill(0);
+    regions_.fill(RegionType::Ram);
+}
+
+std::uint8_t MemoryBus::read(std::uint16_t address) const {
+    if (regions_[address] == RegionType::Unmapped) return 0xFF;
+    return bytes_[address];
+}
+
+void MemoryBus::write(std::uint16_t address, std::uint8_t value) {
+    if (regions_[address] == RegionType::Ram) bytes_[address] = value;
+}
+
 void MemoryBus::load(std::uint16_t address, const std::uint8_t* data, std::size_t size) {
     if (data == nullptr || size == 0) return;
     const std::size_t start = address;
     const std::size_t count = std::min(size, bytes_.size() - start);
-    std::copy_n(data, count, bytes_.begin() + start);
+    for (std::size_t i = 0; i < count; ++i) {
+        // Loading represents a host-side ROM/RAM image operation, so it can
+        // initialize ROM bytes without making them writable by the emulated CPU.
+        if (regions_[start + i] != RegionType::Unmapped) bytes_[start + i] = data[i];
+    }
+}
+
+void MemoryBus::mapRegion(std::uint16_t start, std::size_t size, RegionType type,
+                          std::uint8_t fill) {
+    const std::size_t begin = start;
+    const std::size_t count = std::min(size, bytes_.size() - begin);
+    for (std::size_t i = 0; i < count; ++i) {
+        regions_[begin + i] = type;
+        bytes_[begin + i] = fill;
+    }
+}
+
+MemoryBus::RegionType MemoryBus::regionType(std::uint16_t address) const {
+    return regions_[address];
 }
 } // namespace pc6001

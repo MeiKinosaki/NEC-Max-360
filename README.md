@@ -1,5 +1,7 @@
 # NEC Max 360
 
+Repository: https://github.com/MeiKinosaki/NEC-Max-360
+
 **NEC Max 360** is an early-stage NEC PC-6001 emulator project targeting eventual Xbox 360 homebrew support.
 
 ## Current status
@@ -8,7 +10,8 @@
 - CPU instruction and data accesses routed through a shared flat 64 KiB memory bus.
 - Machine shell with instruction-cycle accounting.
 - Generic I/O port registry, framebuffer storage, audio sample buffer and keyboard-state scaffold.
-- Smoke tests for CPU, memory and scaffold devices.
+- Host regression tests for CPU load/store/arithmetic/call/return and INC/DEC flags, memory bus, scheduler and scaffold devices.
+- CMake target names aligned with the `NEC Max 360` project identity.
 
 ## Host build
 Requires CMake 3.16+ and a C++17 compiler.

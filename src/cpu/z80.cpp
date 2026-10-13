@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <utility>
 
 namespace pc6001 {
 namespace {
@@ -32,8 +33,18 @@ void Z80::load(std::uint16_t address, const std::uint8_t* data, std::size_t size
     std::copy_n(data, count, memory_.begin() + start);
 }
 
-std::uint8_t Z80::read(std::uint16_t address) const { return memory_[address]; }
-void Z80::write(std::uint16_t address, std::uint8_t value) { memory_[address] = value; }
+void Z80::setBus(std::function<std::uint8_t(std::uint16_t)> readFn,
+                 std::function<void(std::uint16_t, std::uint8_t)> writeFn) {
+    busRead_ = std::move(readFn);
+    busWrite_ = std::move(writeFn);
+}
+std::uint8_t Z80::read(std::uint16_t address) const {
+    return busRead_ ? busRead_(address) : memory_[address];
+}
+void Z80::write(std::uint16_t address, std::uint8_t value) {
+    if (busWrite_) busWrite_(address, value);
+    else memory_[address] = value;
+}
 std::uint8_t Z80::fetch8() { return read(regs.pc++); }
 
 std::uint16_t Z80::fetch16() {

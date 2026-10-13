@@ -79,10 +79,46 @@ static void test_call_return_and_stack() {
     assert(cpu.regs.halted);
 }
 
+static void test_rotate_flags_and_control_instructions() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x3E, 0x81, // LD A,0x81
+        0x07,       // RLCA -> 0x03, carry set
+        0x0F,       // RRCA -> 0x81, carry set
+        0x2F,       // CPL -> 0x7E, H and N set
+        0x37,       // SCF
+        0x3F,       // CCF -> carry cleared, H set
+        0x06, 0x02, // LD B,2
+        0x10, 0xFE, // DJNZ back to itself until B becomes zero
+        0x11, 0x34, 0x12, // LD DE,0x1234
+        0x21, 0xCD, 0xAB, // LD HL,0xABCD
+        0xEB,       // EX DE,HL
+        0xF9,       // LD SP,HL
+        0xE9        // JP (HL)
+    };
+    cpu.load(0, program, sizeof(program));
+    assert(cpu.step() == 7 && cpu.regs.a == 0x81);
+    assert(cpu.step() == 4 && cpu.regs.a == 0x03 && (cpu.regs.f & 1));
+    assert(cpu.step() == 4 && cpu.regs.a == 0x81 && (cpu.regs.f & 1));
+    assert(cpu.step() == 4 && cpu.regs.a == 0x7E);
+    assert((cpu.regs.f & 0x12) == 0x12); // H and N
+    assert(cpu.step() == 4 && (cpu.regs.f & 1));
+    assert(cpu.step() == 4 && !(cpu.regs.f & 1) && (cpu.regs.f & 0x10));
+    assert(cpu.step() == 7 && cpu.regs.b == 2);
+    assert(cpu.step() == 13 && cpu.regs.b == 1);
+    assert(cpu.step() == 8 && cpu.regs.b == 0);
+    assert(cpu.step() == 10 && cpu.regs.d == 0x12 && cpu.regs.e == 0x34);
+    assert(cpu.step() == 10 && cpu.regs.h == 0xAB && cpu.regs.l == 0xCD);
+    assert(cpu.step() == 4 && cpu.regs.h == 0x12 && cpu.regs.l == 0x34);
+    assert(cpu.step() == 6 && cpu.regs.sp == 0x1234);
+    assert(cpu.step() == 4 && cpu.regs.pc == 0x1234);
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
     test_call_return_and_stack();
     test_inc_dec_flags_and_carry_preservation();
+    test_rotate_flags_and_control_instructions();
     return 0;
 }

@@ -165,6 +165,23 @@ unsigned Z80::step() {
         return index == 6 ? 11 : 4;
     }
 
+    const auto conditionMet = [this](unsigned condition) {
+        const bool zero = (regs.f & FLAG_Z) != 0;
+        const bool carry = (regs.f & FLAG_C) != 0;
+        const bool parity = (regs.f & FLAG_PV) != 0;
+        const bool sign = (regs.f & FLAG_S) != 0;
+        switch (condition & 7u) {
+        case 0: return !zero;  // NZ
+        case 1: return zero;   // Z
+        case 2: return !carry; // NC
+        case 3: return carry;  // C
+        case 4: return !parity;// PO
+        case 5: return parity; // PE
+        case 6: return !sign;  // P
+        default: return sign;  // M
+        }
+    };
+
     switch (opcode) {
     case 0x00: return 4; // NOP
     case 0x07: { // RLCA
@@ -255,6 +272,29 @@ unsigned Z80::step() {
     case 0x32: { const auto a = fetch16(); write(a, regs.a); return 13; }
     case 0x3A: { const auto a = fetch16(); regs.a = read(a); return 13; }
     case 0xAF: regs.a = 0; setLogicFlags(regs.a); return 4;
+    case 0xC2: case 0xCA: case 0xD2: case 0xDA:
+    case 0xE2: case 0xEA: case 0xF2: case 0xFA: { // JP cc,nn
+        const target = fetch16();
+        if (conditionMet((opcode >> 3) & 7u)) regs.pc = target;
+        return 10;
+    }
+    case 0xC4: case 0xCC: case 0xD4: case 0xDC:
+    case 0xE4: case 0xEC: case 0xF4: case 0xFC: { // CALL cc,nn
+        const target = fetch16();
+        if (conditionMet((opcode >> 3) & 7u)) {
+            push16(regs.pc);
+            regs.pc = target;
+            return 17;
+        }
+        return 10;
+    }
+    case 0xC0: case 0xC8: case 0xD0: case 0xD8:
+    case 0xE0: case 0xE8: case 0xF0: case 0xF8: // RET cc
+        if (conditionMet((opcode >> 3) & 7u)) {
+            regs.pc = pop16();
+            return 11;
+        }
+        return 5;
     case 0xC3: regs.pc = fetch16(); return 10;
     case 0x18: { const auto d = static_cast<std::int8_t>(fetch8()); regs.pc = static_cast<std::uint16_t>(regs.pc + d); return 12; }
     case 0x20: case 0x28: case 0x30: case 0x38: {

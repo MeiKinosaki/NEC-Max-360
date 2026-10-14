@@ -214,6 +214,24 @@ unsigned Z80::step() {
     case 0xED: {
         const std::uint8_t extended = fetch8();
         switch (extended) {
+        case 0x40: case 0x48: case 0x50: case 0x58:
+        case 0x60: case 0x68: case 0x70: case 0x78: { // IN r,(C)
+            const std::uint8_t value = ioRead_ ? ioRead_(pair(0)) : 0xFF;
+            const unsigned index = (extended >> 3) & 7u;
+            if (index != 6) reg8(index) = value;
+            regs.f = static_cast<std::uint8_t>((regs.f & FLAG_C) |
+                (value & (FLAG_S | 0x28)) |
+                (value == 0 ? FLAG_Z : 0) |
+                (parityEven(value) ? FLAG_PV : 0));
+            return 12;
+        }
+        case 0x41: case 0x49: case 0x51: case 0x59:
+        case 0x61: case 0x69: case 0x71: case 0x79: { // OUT (C),r; code 6 outputs zero
+            const unsigned index = (extended >> 3) & 7u;
+            const std::uint8_t value = index == 6 ? 0 : reg8(index);
+            if (ioWrite_) ioWrite_(pair(0), value);
+            return 12;
+        }
         case 0x43: case 0x53: case 0x63: case 0x73: { // LD (nn),BC/DE/HL/SP
             const std::uint16_t address = fetch16();
             const std::uint16_t value = pair((extended >> 4) & 3u);

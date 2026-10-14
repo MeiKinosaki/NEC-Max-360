@@ -35,19 +35,21 @@ int main() {
 
     const std::uint8_t ioProgram[] = {
         0x3E, 0x12,       // LD A,12
-        0xD3, 0x34,       // OUT (34),A -> port 34 receives 12
+        0xD3, 0x34,       // OUT (34),A -> port 1234 receives 12
         0x3E, 0x00,       // LD A,0
-        0xDB, 0x34,       // IN A,(34) -> A=12
+        0x3E, 0x12,       // Restore high port-address byte
+        0xDB, 0x34,       // IN A,(34) reads port 1234 -> A=12
         0x76              // HALT
     };
     machine.memory().load(0, ioProgram, sizeof(ioProgram));
     assert(machine.step() == 7);
     assert(machine.step() == 11);
-    assert(machine.ioPorts().read(0x34) == 0x12);
+    assert(machine.ioPorts().read(0x1234) == 0x12);
+    assert(machine.ioPorts().read(0x0034) == 0xFF);
     assert(machine.step() == 7);
     assert(machine.step() == 11);
     assert(machine.cpu().regs.a == 0x12);
     assert(machine.step() == 4 && machine.cpu().regs.halted);
-    assert(machine.totalCycles() == 40);
+    assert(machine.totalCycles() == 47);
     return 0;
 }

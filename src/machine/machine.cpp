@@ -7,9 +7,9 @@ Machine::Machine() {
         [this](std::uint16_t address) { return memory_.read(address); },
         [this](std::uint16_t address, std::uint8_t value) { memory_.write(address, value); });
     cpu_.setIoBus(
-        [this](std::uint16_t port) { return ioPorts_.read(static_cast<std::uint8_t>(port)); },
+        [this](std::uint16_t port) { return ioPorts_.read(port); },
         [this](std::uint16_t port, std::uint8_t value) {
-            ioPorts_.write(static_cast<std::uint8_t>(port), value);
+            ioPorts_.write(port, value);
         });
 }
 void Machine::reset() {

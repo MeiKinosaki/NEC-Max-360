@@ -24,6 +24,8 @@ public:
     void reset();
     void setBus(std::function<std::uint8_t(std::uint16_t)> readFn,
                 std::function<void(std::uint16_t, std::uint8_t)> writeFn);
+    void setIoBus(std::function<std::uint8_t(std::uint16_t)> readFn,
+                  std::function<void(std::uint16_t, std::uint8_t)> writeFn);
     void load(std::uint16_t address, const std::uint8_t* data, std::size_t size);
     unsigned step();
 
@@ -36,6 +38,8 @@ private:
     std::array<std::uint8_t, 65536> memory_{};
     std::function<std::uint8_t(std::uint16_t)> busRead_{};
     std::function<void(std::uint16_t, std::uint8_t)> busWrite_{};
+    std::function<std::uint8_t(std::uint16_t)> ioRead_{};
+    std::function<void(std::uint16_t, std::uint8_t)> ioWrite_{};
     std::uint16_t fetch16();
     void push16(std::uint16_t value);
     std::uint16_t pop16();

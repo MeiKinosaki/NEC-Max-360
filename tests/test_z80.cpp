@@ -274,6 +274,21 @@ static void test_even_parity_flags() {
     assert((cpu.regs.f & 0x40) == 0);
 }
 
+static void test_undocumented_flag_bits() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x3E, 0x28, // LD A,28
+        0xB7,       // OR A: bits 5 and 3 follow result
+        0xFE, 0x20  // CP 20: undocumented bits follow operand (20)
+    };
+    cpu.load(0, program, sizeof(program));
+    assert(cpu.step() == 7);
+    assert(cpu.step() == 4);
+    assert((cpu.regs.f & 0x28) == 0x28);
+    assert(cpu.step() == 7);
+    assert((cpu.regs.f & 0x28) == 0x20);
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
@@ -285,5 +300,6 @@ int main() {
     test_rst_vectors_and_exchange_stack_hl();
     test_ed_word_memory_transfers();
     test_even_parity_flags();
+    test_undocumented_flag_bits();
     return 0;
 }

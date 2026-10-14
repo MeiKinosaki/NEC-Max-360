@@ -289,6 +289,38 @@ static void test_undocumented_flag_bits() {
     assert((cpu.regs.f & 0x28) == 0x20);
 }
 
+static void test_daa_decimal_adjust() {
+    {
+        pc6001::Z80 cpu;
+        const std::uint8_t program[] = {
+            0x3E, 0x15, // LD A,15
+            0xC6, 0x27, // ADD A,27 -> 3C
+            0x27,       // DAA -> 42
+            0x76
+        };
+        cpu.load(0, program, sizeof(program));
+        assert(cpu.step() == 7);
+        assert(cpu.step() == 7 && cpu.regs.a == 0x3C);
+        assert(cpu.step() == 4 && cpu.regs.a == 0x42);
+        assert((cpu.regs.f & 0x04) != 0); // 0x42 has even parity.
+        assert((cpu.regs.f & 0x01) == 0);
+        assert(cpu.step() == 4 && cpu.regs.halted);
+    }
+    {
+        pc6001::Z80 cpu;
+        const std::uint8_t program[] = {
+            0x3E, 0x99, // LD A,99
+            0xC6, 0x01, // ADD A,01 -> 9A
+            0x27        // DAA -> 00 with carry
+        };
+        cpu.load(0, program, sizeof(program));
+        assert(cpu.step() == 7);
+        assert(cpu.step() == 7 && cpu.regs.a == 0x9A);
+        assert(cpu.step() == 4 && cpu.regs.a == 0x00);
+        assert((cpu.regs.f & 0x41) == 0x41); // Zero and carry.
+    }
+}
+
 int main() {
     test_load_store_and_halt();
     test_register_load_and_arithmetic();
@@ -301,5 +333,6 @@ int main() {
     test_ed_word_memory_transfers();
     test_even_parity_flags();
     test_undocumented_flag_bits();
+    test_daa_decimal_adjust();
     return 0;
 }

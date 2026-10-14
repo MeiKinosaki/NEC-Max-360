@@ -2,6 +2,7 @@
 
 #include "cpu/z80.h"
 #include "machine/memory.h"
+#include "machine/io_ports.h"
 #include "machine/scheduler.h"
 
 #include <cstdint>
@@ -18,10 +19,13 @@ public:
     const Z80& cpu() const { return cpu_; }
     MemoryBus& memory() { return memory_; }
     const MemoryBus& memory() const { return memory_; }
+    IoPorts& ioPorts() { return ioPorts_; }
+    const IoPorts& ioPorts() const { return ioPorts_; }
     std::uint64_t totalCycles() const { return scheduler_.totalCycles(); }
 private:
     Z80 cpu_{};
     MemoryBus memory_{};
+    IoPorts ioPorts_{};
     Scheduler scheduler_{};
 };
 } // namespace pc6001

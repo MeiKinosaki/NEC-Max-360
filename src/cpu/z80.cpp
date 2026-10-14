@@ -268,6 +268,26 @@ unsigned Z80::step() {
         regs.a = ioRead_ ? ioRead_(port) : 0xFF;
         return 11;
     }
+    case 0x27: { // DAA: decimal adjust accumulator after ADD/ADC/SUB/SBC.
+        const std::uint8_t before = regs.a;
+        const bool subtract = (regs.f & FLAG_N) != 0;
+        bool carry = (regs.f & FLAG_C) != 0;
+        std::uint8_t correction = 0;
+        if ((regs.f & FLAG_H) != 0 || (!subtract && (before & 0x0F) > 9))
+            correction |= 0x06;
+        if (carry || (!subtract && before > 0x99)) {
+            correction |= 0x60;
+            if (!subtract) carry = true;
+        }
+        regs.a = static_cast<std::uint8_t>(subtract ? before - correction : before + correction);
+        regs.f = static_cast<std::uint8_t>((regs.f & FLAG_N) |
+            (regs.a & (FLAG_S | 0x28)) |
+            (regs.a == 0 ? FLAG_Z : 0) |
+            (parityEven(regs.a) ? FLAG_PV : 0) |
+            (((before ^ regs.a) & 0x10) ? FLAG_H : 0) |
+            (carry ? FLAG_C : 0));
+        return 4;
+    }
     case 0x00: return 4; // NOP
     case 0x07: { // RLCA
         const auto carry = static_cast<std::uint8_t>(regs.a >> 7);

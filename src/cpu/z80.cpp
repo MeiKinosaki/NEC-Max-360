@@ -104,7 +104,7 @@ void Z80::setPair(unsigned index, std::uint16_t value) {
     }
 }
 void Z80::setLogicFlags(std::uint8_t value) {
-    regs.f = static_cast<std::uint8_t>((value & FLAG_S) |
+    regs.f = static_cast<std::uint8_t>((value & (FLAG_S | 0x28)) |
         (value == 0 ? FLAG_Z : 0) | (parityEven(value) ? FLAG_PV : 0));
 }
 void Z80::alu(unsigned operation, std::uint8_t value) {
@@ -115,7 +115,7 @@ void Z80::alu(unsigned operation, std::uint8_t value) {
     case 0: case 1: { // ADD/ADC
         result = static_cast<unsigned>(old) + value + carryIn;
         const auto out = static_cast<std::uint8_t>(result);
-        regs.f = static_cast<std::uint8_t>((out & FLAG_S) | (out == 0 ? FLAG_Z : 0) |
+        regs.f = static_cast<std::uint8_t>((out & (FLAG_S | 0x28)) | (out == 0 ? FLAG_Z : 0) |
             (((old ^ value ^ out) & 0x10) ? FLAG_H : 0) |
             ((~(old ^ value) & (old ^ out) & 0x80) ? FLAG_PV : 0) |
             (result > 0xFF ? FLAG_C : 0));
@@ -124,11 +124,15 @@ void Z80::alu(unsigned operation, std::uint8_t value) {
     case 2: case 3: case 7: { // SUB/SBC/CP
         const unsigned sub = static_cast<unsigned>(value) + carryIn;
         const auto out = static_cast<std::uint8_t>(static_cast<unsigned>(old) - sub);
-        regs.f = static_cast<std::uint8_t>(FLAG_N | (out & FLAG_S) |
+        regs.f = static_cast<std::uint8_t>(FLAG_N | (out & (FLAG_S | 0x28)) |
             (out == 0 ? FLAG_Z : 0) | (((old ^ value ^ out) & 0x10) ? FLAG_H : 0) |
             (((old ^ value) & (old ^ out) & 0x80) ? FLAG_PV : 0) |
             (static_cast<unsigned>(old) < sub ? FLAG_C : 0));
-        if ((operation & 7u) != 7u) regs.a = out;
+        if ((operation & 7u) == 7u) {
+            regs.f = static_cast<std::uint8_t>((regs.f & ~0x28u) | (value & 0x28u));
+        } else {
+            regs.a = out;
+        }
         break;
     }
     case 4: regs.a = static_cast<std::uint8_t>(old & value); setLogicFlags(regs.a); regs.f |= FLAG_H; break;
@@ -177,7 +181,7 @@ unsigned Z80::step() {
         const std::uint8_t old = index == 6 ? read(pair(2)) : reg8(index);
         const std::uint8_t value = static_cast<std::uint8_t>(old + (decrement ? -1 : 1));
         const auto carry = static_cast<std::uint8_t>(regs.f & FLAG_C);
-        regs.f = static_cast<std::uint8_t>(carry | (value & FLAG_S) |
+        regs.f = static_cast<std::uint8_t>(carry | (value & (FLAG_S | 0x28)) |
             (value == 0 ? FLAG_Z : 0) |
             ((decrement ? (old & 0x0F) == 0 : (old & 0x0F) == 0x0F) ? FLAG_H : 0) |
             ((decrement ? old == 0x80 : old == 0x7F) ? FLAG_PV : 0) |

@@ -319,6 +319,20 @@ static void test_daa_decimal_adjust() {
         assert(cpu.step() == 4 && cpu.regs.a == 0x00);
         assert((cpu.regs.f & 0x41) == 0x41); // Zero and carry.
     }
+    {
+        pc6001::Z80 cpu;
+        const std::uint8_t program[] = {
+            0x3E, 0x45, // LD A,45
+            0xD6, 0x06, // SUB 06 -> 3F, half borrow
+            0x27        // DAA -> 39, subtraction flags retained
+        };
+        cpu.load(0, program, sizeof(program));
+        assert(cpu.step() == 7);
+        assert(cpu.step() == 7 && cpu.regs.a == 0x3F);
+        assert(cpu.step() == 4 && cpu.regs.a == 0x39);
+        assert((cpu.regs.f & 0x02) != 0); // N is preserved.
+        assert((cpu.regs.f & 0x01) == 0); // No borrow from the full byte.
+    }
 }
 
 int main() {

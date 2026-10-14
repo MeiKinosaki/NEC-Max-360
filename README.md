@@ -33,3 +33,6 @@ This is not yet a complete or verified PC-6001 emulator. The CPU opcode set and 
 6. Configure Xbox 360 toolchain and produce/test `default.xex`.
 
 See [LICENSE](LICENSE); preserve third-party notices and comply with upstream licenses for future ports.
+
+
+Current implementation note: ED-prefixed I/O register operations (`IN r,(C)` / `OUT (C),r`) have initial support; their edge cases and undocumented flags still require validation against a Z80 reference test suite.

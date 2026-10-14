@@ -51,5 +51,26 @@ int main() {
     assert(machine.cpu().regs.a == 0x12);
     assert(machine.step() == 4 && machine.cpu().regs.halted);
     assert(machine.totalCycles() == 47);
+
+    machine.reset();
+    const std::uint8_t edIoProgram[] = {
+        0x01, 0x34, 0x12, // LD BC,1234
+        0x3E, 0x5A,       // LD A,5A
+        0xED, 0x79,       // OUT (C),A -> port BC receives 5A
+        0x3E, 0x00,       // LD A,0
+        0xED, 0x78,       // IN A,(C) -> A=5A
+        0x76              // HALT
+    };
+    machine.memory().load(0, edIoProgram, sizeof(edIoProgram));
+    assert(machine.step() == 10);
+    assert(machine.step() == 7);
+    assert(machine.step() == 12);
+    assert(machine.ioPorts().read(0x1234) == 0x5A);
+    assert(machine.step() == 7);
+    assert(machine.step() == 12);
+    assert(machine.cpu().regs.a == 0x5A);
+    assert((machine.cpu().regs.f & 0x04) != 0); // even parity for 0x5A
+    assert(machine.step() == 4 && machine.cpu().regs.halted);
+    assert(machine.totalCycles() == 52);
     return 0;
 }

@@ -18,8 +18,6 @@ public:
     enum class RegionType : std::uint8_t { Ram, Rom, Unmapped };
     void mapRegion(std::uint16_t start, std::size_t size, RegionType type, std::uint8_t fill = 0);
     RegionType regionType(std::uint16_t address) const;
-    // Approximate base PC-6001 layout; cartridge/VRAM overlays remain future work.
-    void configurePc6001Base16K();
 private:
     std::array<std::uint8_t, kAddressSpace> bytes_{};
     std::array<RegionType, kAddressSpace> regions_{};

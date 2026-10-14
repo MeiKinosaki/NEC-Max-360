@@ -45,6 +45,11 @@ void Z80::setBus(std::function<std::uint8_t(std::uint16_t)> readFn,
     busRead_ = std::move(readFn);
     busWrite_ = std::move(writeFn);
 }
+void Z80::setIoBus(std::function<std::uint8_t(std::uint16_t)> readFn,
+                   std::function<void(std::uint16_t, std::uint8_t)> writeFn) {
+    ioRead_ = std::move(readFn);
+    ioWrite_ = std::move(writeFn);
+}
 std::uint8_t Z80::read(std::uint16_t address) const {
     return busRead_ ? busRead_(address) : memory_[address];
 }
@@ -228,6 +233,18 @@ unsigned Z80::step() {
         default:
             return 8; // Unimplemented ED-prefixed instruction placeholder.
         }
+    }
+    case 0xD3: { // OUT (n),A; full Z80 port address uses A as high byte.
+        const std::uint8_t low = fetch8();
+        const std::uint16_t port = static_cast<std::uint16_t>((regs.a << 8) | low);
+        if (ioWrite_) ioWrite_(port, regs.a);
+        return 11;
+    }
+    case 0xDB: { // IN A,(n); full Z80 port address uses old A as high byte.
+        const std::uint8_t low = fetch8();
+        const std::uint16_t port = static_cast<std::uint16_t>((regs.a << 8) | low);
+        regs.a = ioRead_ ? ioRead_(port) : 0xFF;
+        return 11;
     }
     case 0x00: return 4; // NOP
     case 0x07: { // RLCA

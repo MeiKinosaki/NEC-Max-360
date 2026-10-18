@@ -13,10 +13,12 @@ Machine::Machine() {
         });
 }
 void Machine::configureBasePc6001Map() {
+    useBasePc6001Map_ = true;
     memory_.configureBasePc6001Map();
 }
 void Machine::reset() {
     memory_.reset();
+    if (useBasePc6001Map_) memory_.configureBasePc6001Map();
     ioPorts_.reset();
     cpu_.reset();
     scheduler_.reset();

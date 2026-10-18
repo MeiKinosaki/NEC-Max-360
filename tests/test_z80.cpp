@@ -306,6 +306,29 @@ static void test_ed_block_transfer_repeat() {
     assert(cpu.step() == 4 && cpu.regs.halted);
 }
 
+static void test_ed_neg_and_retn() {
+    {
+        pc6001::Z80 cpu;
+        const std::uint8_t program[] = {0x3E, 0x01, 0xED, 0x44};
+        cpu.load(0, program, sizeof(program));
+        assert(cpu.step() == 7);
+        assert(cpu.step() == 8);
+        assert(cpu.regs.a == 0xFF);
+        assert((cpu.regs.f & 0x93) == 0x93);
+        assert((cpu.regs.f & 0x10) != 0);
+    }
+    {
+        pc6001::Z80 cpu;
+        const std::uint8_t program[] = {0xED, 0x45};
+        cpu.load(0, program, sizeof(program));
+        cpu.regs.sp = 0x4000;
+        cpu.write(0x4000, 0x34);
+        cpu.write(0x4001, 0x12);
+        assert(cpu.step() == 14);
+        assert(cpu.regs.pc == 0x1234 && cpu.regs.sp == 0x4002);
+    }
+}
+
 static void test_even_parity_flags() {
     pc6001::Z80 cpu;
     const std::uint8_t program[] = {
@@ -398,6 +421,7 @@ int main() {
     test_add_hl_register_pairs_flags();
     test_rst_vectors_and_exchange_stack_hl();
     test_ed_word_memory_transfers();
+    test_ed_neg_and_retn();
     test_ed_adc_sbc_hl();
     test_ed_block_transfer_repeat();
     test_even_parity_flags();

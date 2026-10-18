@@ -11,6 +11,8 @@ public:
     static constexpr unsigned kWidth = 320;
     static constexpr unsigned kHeight = 240;
     void clear(std::uint32_t argb = 0xFF000000u);
+    bool setPixel(unsigned x, unsigned y, std::uint32_t argb);
+    std::uint32_t pixel(unsigned x, unsigned y) const;
     std::uint32_t* pixels() { return pixels_.data(); }
     const std::uint32_t* pixels() const { return pixels_.data(); }
     unsigned width() const { return kWidth; }

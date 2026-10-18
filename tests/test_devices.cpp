@@ -33,10 +33,22 @@ int main() {
     assert(keyboard.isPressed(0x41));
     keyboard.setKey(0x41, false);
     assert(!keyboard.isPressed(0x41));
+    assert(keyboard.readMatrixRow(0) == 0xFF);
+    keyboard.setMatrixKey(2, 1, true);
+    keyboard.setMatrixKey(2, 7, true);
+    assert(keyboard.readMatrixRow(2) == 0x7D); // active-low bits 1 and 7
+    assert(keyboard.readMatrixRow(1) == 0xFF);
+    assert(keyboard.readMatrixRow(8) == 0xFF);
+    keyboard.reset();
+    assert(keyboard.readMatrixRow(2) == 0xFF);
     pc6001::VideoFrame frame;
     frame.clear(0xFF123456u);
     assert(frame.width() == 320 && frame.height() == 240);
     assert(frame.pixels()[0] == 0xFF123456u);
+    assert(frame.setPixel(12, 34, 0xFFABCDEFu));
+    assert(frame.pixel(12, 34) == 0xFFABCDEFu);
+    assert(!frame.setPixel(frame.width(), 0, 0xFFFFFFFFu));
+    assert(frame.pixel(frame.width(), 0) == 0);
     pc6001::AudioBuffer audio(2);
     assert(audio.push(10) && audio.push(-10));
     assert(!audio.push(30));

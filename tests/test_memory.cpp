@@ -31,5 +31,24 @@ int main() {
     memory.mapRegion(0x2000, 0x1000, Region::Ram, 0x00);
     memory.write(0x2000, 0xA7);
     assert(memory.read(0x2000) == 0xA7);
+    // Explicit baseline PC-6001 map: ROM, unmapped expansion window, internal RAM.
+    memory.reset();
+    memory.configureBasePc6001Map();
+    assert(memory.regionType(0x0000) == Region::Rom);
+    assert(memory.regionType(0x3FFF) == Region::Rom);
+    assert(memory.read(0x0000) == 0xFF); // ROM placeholder until host loads firmware.
+    memory.write(0x0000, 0x12);
+    assert(memory.read(0x0000) == 0xFF); // CPU cannot write ROM.
+    assert(memory.regionType(0x4000) == Region::Unmapped);
+    assert(memory.regionType(0xBFFF) == Region::Unmapped);
+    assert(memory.read(0x4000) == 0xFF);
+    assert(memory.regionType(0xC000) == Region::Ram);
+    assert(memory.regionType(0xFFFF) == Region::Ram);
+    memory.write(0xC000, 0x63);
+    assert(memory.read(0xC000) == 0x63);
+    const std::uint8_t firmware[] = {0xC3, 0x00, 0xC0};
+    memory.load(0x0000, firmware, sizeof(firmware));
+    assert(memory.read(0x0000) == 0xC3);
+
     return 0;
 }

@@ -12,6 +12,9 @@ Machine::Machine() {
             ioPorts_.write(port, value);
         });
 }
+void Machine::configureBasePc6001Map() {
+    memory_.configureBasePc6001Map();
+}
 void Machine::reset() {
     memory_.reset();
     ioPorts_.reset();

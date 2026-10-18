@@ -12,6 +12,10 @@ public:
     static constexpr std::size_t kAddressSpace = 65536;
     MemoryBus();
     void reset();
+    // Baseline original PC-6001 layout with no expansion cartridge attached.
+    // BASIC ROM occupies 0000-3FFF; the external expansion window is unmapped;
+    // internal RAM occupies C000-FFFF. ROM bytes must be loaded by the host.
+    void configureBasePc6001Map();
     std::uint8_t read(std::uint16_t address) const;
     void write(std::uint16_t address, std::uint8_t value);
     void load(std::uint16_t address, const std::uint8_t* data, std::size_t size);

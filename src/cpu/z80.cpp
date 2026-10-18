@@ -217,6 +217,54 @@ unsigned Z80::step() {
     switch (opcode) {
     case 0xED: {
         const std::uint8_t extended = fetch8();
+        // 16-bit ADC/SBC HL,rr. These operations update all arithmetic flags.
+        if ((extended & 0xCF) == 0x42 || (extended & 0xCF) == 0x4A) {
+            const bool subtract = (extended & 0x08) == 0;
+            const std::uint16_t lhs = pair(2);
+            const std::uint16_t rhs = pair((extended >> 4) & 3u);
+            const unsigned carryIn = (regs.f & FLAG_C) ? 1u : 0u;
+            std::uint16_t out = 0;
+            if (subtract) {
+                const unsigned sub = static_cast<unsigned>(rhs) + carryIn;
+                out = static_cast<std::uint16_t>(static_cast<unsigned>(lhs) - sub);
+                regs.f = static_cast<std::uint8_t>(FLAG_N | ((out >> 8) & 0xA8) |
+                    (out == 0 ? FLAG_Z : 0) |
+                    (((lhs ^ rhs ^ out) & 0x1000u) ? FLAG_H : 0) |
+                    (((lhs ^ rhs) & (lhs ^ out) & 0x8000u) ? FLAG_PV : 0) |
+                    (static_cast<unsigned>(lhs) < sub ? FLAG_C : 0));
+            } else {
+                const std::uint32_t sum = static_cast<std::uint32_t>(lhs) + rhs + carryIn;
+                out = static_cast<std::uint16_t>(sum);
+                regs.f = static_cast<std::uint8_t>(((out >> 8) & 0xA8) |
+                    (out == 0 ? FLAG_Z : 0) |
+                    (((lhs ^ rhs ^ out) & 0x1000u) ? FLAG_H : 0) |
+                    ((~(lhs ^ rhs) & (lhs ^ out) & 0x8000u) ? FLAG_PV : 0) |
+                    ((sum > 0xFFFFu) ? FLAG_C : 0));
+            }
+            setPair(2, out);
+            return 15;
+        }
+
+        // LDI/LDD/LDIR/LDDR: copy one byte from HL to DE and update BC/HL/DE.
+        if (extended == 0xA0 || extended == 0xA8 ||
+            extended == 0xB0 || extended == 0xB8) {
+            const bool decrement = (extended == 0xA8 || extended == 0xB8);
+            const bool repeat = (extended == 0xB0 || extended == 0xB8);
+            const std::uint8_t value = read(pair(2));
+            write(pair(1), value);
+            setPair(2, static_cast<std::uint16_t>(pair(2) + (decrement ? -1 : 1)));
+            setPair(1, static_cast<std::uint16_t>(pair(1) + (decrement ? -1 : 1)));
+            setPair(0, static_cast<std::uint16_t>(pair(0) - 1));
+            const std::uint8_t sum = static_cast<std::uint8_t>(regs.a + value);
+            regs.f = static_cast<std::uint8_t>((regs.f & (FLAG_S | FLAG_Z | FLAG_C)) |
+                (pair(0) != 0 ? FLAG_PV : 0) | (sum & 0x08) | ((sum & 0x02) << 4));
+            if (repeat && pair(0) != 0) {
+                regs.pc = static_cast<std::uint16_t>(regs.pc - 2);
+                return 21;
+            }
+            return 16;
+        }
+
         switch (extended) {
         case 0x40: case 0x48: case 0x50: case 0x58:
         case 0x60: case 0x68: case 0x70: case 0x78: { // IN r,(C)

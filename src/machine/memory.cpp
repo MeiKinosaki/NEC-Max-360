@@ -10,6 +10,14 @@ void MemoryBus::reset() {
     regions_.fill(RegionType::Ram);
 }
 
+void MemoryBus::configureBasePc6001Map() {
+    // This models the baseline machine without a cartridge/expansion device.
+    // ROM is initialized to 0xFF until a valid BASIC ROM image is loaded.
+    mapRegion(0x0000, 0x4000, RegionType::Rom, 0xFF);
+    mapRegion(0x4000, 0x8000, RegionType::Unmapped, 0xFF);
+    mapRegion(0xC000, 0x4000, RegionType::Ram, 0x00);
+}
+
 std::uint8_t MemoryBus::read(std::uint16_t address) const {
     if (regions_[address] == RegionType::Unmapped) return 0xFF;
     return bytes_[address];

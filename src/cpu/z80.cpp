@@ -265,7 +265,19 @@ unsigned Z80::step() {
             return 16;
         }
 
+        // NEG has several documented opcode aliases in the ED page.
         switch (extended) {
+        case 0x44: case 0x4C: case 0x54: case 0x5C:
+        case 0x64: case 0x6C: case 0x74: case 0x7C: {
+            const std::uint8_t value = regs.a;
+            regs.a = 0;
+            alu(2, value);
+            return 8;
+        }
+        case 0x45: case 0x4D: case 0x55: case 0x5D:
+        case 0x65: case 0x6D: case 0x75: case 0x7D: // RETN/RETI aliases; IFF model not yet present.
+            regs.pc = pop16();
+            return 14;
         case 0x40: case 0x48: case 0x50: case 0x58:
         case 0x60: case 0x68: case 0x70: case 0x78: { // IN r,(C)
             const std::uint8_t value = ioRead_ ? ioRead_(pair(0)) : 0xFF;

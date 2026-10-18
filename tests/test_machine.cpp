@@ -72,5 +72,14 @@ int main() {
     assert((machine.cpu().regs.f & 0x04) != 0); // even parity for 0x5A
     assert(machine.step() == 4 && machine.cpu().regs.halted);
     assert(machine.totalCycles() == 52);
+
+    machine.reset();
+    machine.configureBasePc6001Map();
+    using Region = pc6001::MemoryBus::RegionType;
+    assert(machine.memory().regionType(0x0000) == Region::Rom);
+    assert(machine.memory().regionType(0x4000) == Region::Unmapped);
+    assert(machine.memory().regionType(0xC000) == Region::Ram);
+    machine.memory().load(0, ioProgram, sizeof(ioProgram));
+    assert(machine.memory().read(0) == 0x3E); // Host-side firmware/program loading can initialize ROM.
     return 0;
 }

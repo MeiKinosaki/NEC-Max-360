@@ -253,6 +253,59 @@ static void test_ed_word_memory_transfers() {
     assert(cpu.step() == 4 && cpu.regs.halted);
 }
 
+static void test_ed_adc_sbc_hl() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x21, 0xFF, 0x0F, // LD HL,0FFF
+        0x01, 0x01, 0x00, // LD BC,0001
+        0x37,             // SCF
+        0xED, 0x4A,       // ADC HL,BC -> 1001
+        0x21, 0x00, 0x10, // LD HL,1000
+        0x37,             // SCF
+        0xED, 0x42        // SBC HL,BC -> 0FFE
+    };
+    cpu.load(0, program, sizeof(program));
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 4);
+    assert(cpu.step() == 15);
+    assert(cpu.regs.h == 0x10 && cpu.regs.l == 0x01);
+    assert((cpu.regs.f & 0x10) != 0);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 4);
+    assert(cpu.step() == 15);
+    assert(cpu.regs.h == 0x0F && cpu.regs.l == 0xFE);
+    assert((cpu.regs.f & 0x12) == 0x12);
+}
+
+static void test_ed_block_transfer_repeat() {
+    pc6001::Z80 cpu;
+    const std::uint8_t program[] = {
+        0x21, 0x00, 0x40, // LD HL,4000
+        0x11, 0x00, 0x50, // LD DE,5000
+        0x01, 0x02, 0x00, // LD BC,2
+        0xED, 0xB0,       // LDIR
+        0x76
+    };
+    const std::uint8_t source[] = {0xA5, 0x5A};
+    cpu.load(0, program, sizeof(program));
+    cpu.load(0x4000, source, sizeof(source));
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 10);
+    assert(cpu.step() == 21);
+    assert(cpu.read(0x5000) == 0xA5);
+    assert(cpu.regs.b == 0 && cpu.regs.c == 1);
+    assert(cpu.regs.h == 0x40 && cpu.regs.l == 0x01);
+    assert(cpu.regs.d == 0x50 && cpu.regs.e == 0x01);
+    assert((cpu.regs.f & 0x04) != 0);
+    assert(cpu.step() == 16);
+    assert(cpu.read(0x5001) == 0x5A);
+    assert(cpu.regs.b == 0 && cpu.regs.c == 0);
+    assert((cpu.regs.f & 0x04) == 0);
+    assert(cpu.step() == 4 && cpu.regs.halted);
+}
+
 static void test_even_parity_flags() {
     pc6001::Z80 cpu;
     const std::uint8_t program[] = {
@@ -345,6 +398,8 @@ int main() {
     test_add_hl_register_pairs_flags();
     test_rst_vectors_and_exchange_stack_hl();
     test_ed_word_memory_transfers();
+    test_ed_adc_sbc_hl();
+    test_ed_block_transfer_repeat();
     test_even_parity_flags();
     test_undocumented_flag_bits();
     test_daa_decimal_adjust();

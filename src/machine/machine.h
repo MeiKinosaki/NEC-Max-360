@@ -28,5 +28,6 @@ private:
     MemoryBus memory_{};
     IoPorts ioPorts_{};
     Scheduler scheduler_{};
+    bool useBasePc6001Map_ = false;
 };
 } // namespace pc6001

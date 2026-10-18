@@ -14,6 +14,7 @@ class Machine {
 public:
     Machine();
     void reset();
+    void configureBasePc6001Map();
     unsigned step();
     Z80& cpu() { return cpu_; }
     const Z80& cpu() const { return cpu_; }

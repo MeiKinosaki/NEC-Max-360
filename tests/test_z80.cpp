@@ -304,6 +304,31 @@ static void test_ed_block_transfer_repeat() {
     assert(cpu.regs.b == 0 && cpu.regs.c == 0);
     assert((cpu.regs.f & 0x04) == 0);
     assert(cpu.step() == 4 && cpu.regs.halted);
+
+    pc6001::Z80 reverseCpu;
+    const std::uint8_t reverseProgram[] = {
+        0x21, 0x01, 0x40, // LD HL,4001
+        0x11, 0x01, 0x50, // LD DE,5001
+        0x01, 0x02, 0x00, // LD BC,2
+        0xED, 0xB8,       // LDDR
+        0x76
+    };
+    const std::uint8_t reverseSource[] = {0xA5, 0x5A};
+    reverseCpu.load(0, reverseProgram, sizeof(reverseProgram));
+    reverseCpu.load(0x4000, reverseSource, sizeof(reverseSource));
+    assert(reverseCpu.step() == 10);
+    assert(reverseCpu.step() == 10);
+    assert(reverseCpu.step() == 10);
+    assert(reverseCpu.step() == 21);
+    assert(reverseCpu.read(0x5001) == 0x5A);
+    assert(reverseCpu.regs.h == 0x40 && reverseCpu.regs.l == 0x00);
+    assert(reverseCpu.regs.d == 0x50 && reverseCpu.regs.e == 0x00);
+    assert(reverseCpu.step() == 16);
+    assert(reverseCpu.read(0x5000) == 0xA5);
+    assert(reverseCpu.regs.b == 0 && reverseCpu.regs.c == 0);
+    assert(reverseCpu.regs.h == 0x3F && reverseCpu.regs.l == 0xFF);
+    assert(reverseCpu.regs.d == 0x4F && reverseCpu.regs.e == 0xFF);
+    assert(reverseCpu.step() == 4 && reverseCpu.regs.halted);
 }
 
 static void test_ed_neg_and_retn() {

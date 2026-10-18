@@ -81,5 +81,10 @@ int main() {
     assert(machine.memory().regionType(0xC000) == Region::Ram);
     machine.memory().load(0, ioProgram, sizeof(ioProgram));
     assert(machine.memory().read(0) == 0x3E); // Host-side firmware/program loading can initialize ROM.
+    machine.reset();
+    assert(machine.memory().regionType(0x0000) == Region::Rom);
+    assert(machine.memory().regionType(0x4000) == Region::Unmapped);
+    assert(machine.memory().regionType(0xC000) == Region::Ram);
+    assert(machine.memory().read(0x0000) == 0xFF); // Reset restores ROM placeholder, not RAM mapping.
     return 0;
 }

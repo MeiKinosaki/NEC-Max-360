@@ -79,17 +79,29 @@ int main() {
     assert(machine.memory().regionType(0x0000) == Region::Rom);
     assert(machine.memory().regionType(0x4000) == Region::Unmapped);
     assert(machine.memory().regionType(0xC000) == Region::Ram);
-    machine.memory().load(0, ioProgram, sizeof(ioProgram));
-    assert(machine.memory().read(0) == 0x3E); // Host-side firmware/program loading can initialize ROM.
+    const std::uint8_t mappedProgram[] = {
+        0x3E, 0x66,       // LD A,66
+        0x32, 0x00, 0xC0, // LD (C000),A -> internal RAM
+        0x32, 0x00, 0x40, // LD (4000),A -> unmapped expansion, ignored
+        0x76
+    };
+    machine.memory().load(0, mappedProgram, sizeof(mappedProgram));
+    assert(machine.memory().read(0) == 0x3E); // Host can load firmware into ROM.
     machine.reset();
     assert(machine.memory().regionType(0x0000) == Region::Rom);
     assert(machine.memory().regionType(0x4000) == Region::Unmapped);
     assert(machine.memory().regionType(0xC000) == Region::Ram);
-    assert(machine.memory().read(0x0000) == 0x3E); // Loaded firmware survives machine reset.
+    assert(machine.memory().read(0x0000) == 0x3E); // Firmware survives reset.
     machine.memory().write(0xC000, 0xA5);
     machine.reset();
     assert(machine.memory().read(0x0000) == 0x3E); // ROM image is preserved.
     assert(machine.memory().read(0xC000) == 0x00); // RAM is cleared.
     assert(machine.memory().regionType(0x4000) == Region::Unmapped);
+    assert(machine.step() == 7 && machine.cpu().regs.a == 0x66);
+    assert(machine.step() == 13);
+    assert(machine.memory().read(0xC000) == 0x66);
+    assert(machine.step() == 13);
+    assert(machine.memory().read(0x4000) == 0xFF); // Writes to unmapped memory have no effect.
+    assert(machine.step() == 4 && machine.cpu().regs.halted);
     return 0;
 }

@@ -12,6 +12,8 @@ public:
     static constexpr std::size_t kAddressSpace = 65536;
     MemoryBus();
     void reset();
+    // Reset volatile memory without discarding loaded ROM images or the address map.
+    void resetMappedContents();
     // Baseline original PC-6001 layout with no expansion cartridge attached.
     // BASIC ROM occupies 0000-3FFF; the external expansion window is unmapped;
     // internal RAM occupies C000-FFFF. ROM bytes must be loaded by the host.

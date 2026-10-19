@@ -10,6 +10,14 @@ void MemoryBus::reset() {
     regions_.fill(RegionType::Ram);
 }
 
+void MemoryBus::resetMappedContents() {
+    for (std::size_t i = 0; i < bytes_.size(); ++i) {
+        if (regions_[i] == RegionType::Ram) bytes_[i] = 0;
+        else if (regions_[i] == RegionType::Unmapped) bytes_[i] = 0xFF;
+        // ROM contents are firmware and survive a machine reset.
+    }
+}
+
 void MemoryBus::configureBasePc6001Map() {
     // This models the baseline machine without a cartridge/expansion device.
     // ROM is initialized to 0xFF until a valid BASIC ROM image is loaded.

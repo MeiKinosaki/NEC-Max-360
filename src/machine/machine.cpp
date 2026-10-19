@@ -17,8 +17,12 @@ void Machine::configureBasePc6001Map() {
     memory_.configureBasePc6001Map();
 }
 void Machine::reset() {
-    memory_.reset();
-    if (useBasePc6001Map_) memory_.configureBasePc6001Map();
+    if (useBasePc6001Map_) {
+        // Preserve firmware and address-region configuration across a CPU reset.
+        memory_.resetMappedContents();
+    } else {
+        memory_.reset();
+    }
     ioPorts_.reset();
     cpu_.reset();
     scheduler_.reset();

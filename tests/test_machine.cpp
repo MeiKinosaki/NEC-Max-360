@@ -85,6 +85,11 @@ int main() {
     assert(machine.memory().regionType(0x0000) == Region::Rom);
     assert(machine.memory().regionType(0x4000) == Region::Unmapped);
     assert(machine.memory().regionType(0xC000) == Region::Ram);
-    assert(machine.memory().read(0x0000) == 0xFF); // Reset restores ROM placeholder, not RAM mapping.
+    assert(machine.memory().read(0x0000) == 0x3E); // Loaded firmware survives machine reset.
+    machine.memory().write(0xC000, 0xA5);
+    machine.reset();
+    assert(machine.memory().read(0x0000) == 0x3E); // ROM image is preserved.
+    assert(machine.memory().read(0xC000) == 0x00); // RAM is cleared.
+    assert(machine.memory().regionType(0x4000) == Region::Unmapped);
     return 0;
 }

@@ -103,5 +103,20 @@ int main() {
     assert(machine.step() == 13);
     assert(machine.memory().read(0x4000) == 0xFF); // Writes to unmapped memory have no effect.
     assert(machine.step() == 4 && machine.cpu().regs.halted);
+
+    // Machine owns and resets its generic peripheral scaffolds as one unit.
+    machine.keyboard().setKey(0x41, true);
+    machine.keyboard().setMatrixKey(1, 2, true);
+    machine.video().setPixel(5, 6, 0xFF123456u);
+    assert(machine.audio().push(123));
+    assert(machine.keyboard().isPressed(0x41));
+    assert(machine.keyboard().readMatrixRow(1) == 0xFB);
+    assert(machine.video().pixel(5, 6) == 0xFF123456u);
+    assert(machine.audio().samples().size() == 1);
+    machine.reset();
+    assert(!machine.keyboard().isPressed(0x41));
+    assert(machine.keyboard().readMatrixRow(1) == 0xFF);
+    assert(machine.video().pixel(5, 6) == 0xFF000000u);
+    assert(machine.audio().samples().empty());
     return 0;
 }

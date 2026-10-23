@@ -24,6 +24,9 @@ void Machine::reset() {
         memory_.reset();
     }
     ioPorts_.reset();
+    keyboard_.reset();
+    video_.clear();
+    audio_.clear();
     cpu_.reset();
     scheduler_.reset();
 }

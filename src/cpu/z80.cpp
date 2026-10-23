@@ -454,7 +454,7 @@ unsigned Z80::step() {
     }
     case 0xC4: case 0xCC: case 0xD4: case 0xDC:
     case 0xE4: case 0xEC: case 0xF4: case 0xFC: { // CALL cc,nn
-        const target = fetch16();
+        const std::uint16_t target = fetch16();
         if (conditionMet((opcode >> 3) & 7u)) {
             push16(regs.pc);
             regs.pc = target;

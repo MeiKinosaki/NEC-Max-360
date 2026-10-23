@@ -448,7 +448,7 @@ unsigned Z80::step() {
     case 0xAF: regs.a = 0; setLogicFlags(regs.a); return 4;
     case 0xC2: case 0xCA: case 0xD2: case 0xDA:
     case 0xE2: case 0xEA: case 0xF2: case 0xFA: { // JP cc,nn
-        const target = fetch16();
+        const std::uint16_t target = fetch16();
         if (conditionMet((opcode >> 3) & 7u)) regs.pc = target;
         return 10;
     }
